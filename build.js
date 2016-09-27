@@ -46,7 +46,7 @@ async.waterfall([
     function(cb) {
       rmDir('production');
       rmDir('dev');
-      var cmd = 'webpack --config webpack.production.config.js'
+      var cmd = 'webpack -p --config webpack.production.config.js'
       if (!isProduction) {
         cmd = 'webpack';
       }
