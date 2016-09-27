@@ -22,7 +22,7 @@ var purify = require("purifycss-webpack-plugin")
 var exports = {
   context: __dirname,
   entry: [
-    path.resolve(__dirname, 'app/index.js')
+    'babel-polyfill', path.resolve(__dirname, 'app/index.js')
   ],
   output: {
     path: path.resolve(__dirname, 'production'),
