@@ -21,10 +21,9 @@ var purify = require("purifycss-webpack-plugin")
 
 var exports = {
   context: __dirname,
-  entry: {
-    app: path.resolve(__dirname, 'app/index.js'),
-    vendor: ["react", "react-router", "moment"],
-  },
+  entry: [
+    path.resolve(__dirname, 'app/index.js')
+  ],
   output: {
     path: path.resolve(__dirname, 'production'),
     filename: 'index_bundle.js'
@@ -68,8 +67,7 @@ var exports = {
             "app/index.html",
             "app/js/*.js"
         ]
-    }),
-    new webpack.optimize.CommonsChunkPlugin('vendor', 'vendor.js', Infinity),
+    })
   ]
 }
 
