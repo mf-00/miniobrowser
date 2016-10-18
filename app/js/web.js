@@ -87,10 +87,10 @@ export default class Web {
   ListObjects(args) {
     return this.makeCall('ListObjects', args)
   }
-  GetObjectURL(args) {
-    return this.makeCall('GetObjectURL', args)
+  PresignedGet(args) {
+    return this.makeCall('PresignedGet', args)
   }
-  PutObjectURL(args) {
+   PutObjectURL(args) {
     return this.makeCall('PutObjectURL', args)
   }
   RemoveObject(args) {
@@ -114,5 +114,8 @@ export default class Web {
   }
   SetBucketPolicy(args) {
     return this.makeCall('SetBucketPolicy', args)
+  }
+  ListAllBucketPolicies(args) {
+    return this.makeCall('ListAllBucketPolicies', args)
   }
 }

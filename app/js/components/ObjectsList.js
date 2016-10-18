@@ -18,12 +18,24 @@ import React from 'react'
 import Moment from 'moment'
 import humanize from 'humanize'
 import connect from 'react-redux/lib/components/connect'
+import Dropdown from 'react-bootstrap/lib/Dropdown'
 
-let ObjectsList = ({ objects, currentPath, selectPrefix, dataType, removeObject, loadPath }) => {
+
+let ObjectsList = ({ objects, currentPath, selectPrefix, dataType, showDeleteConfirmation, shareObject, loadPath }) => {
     const list = objects.map((object, i) => {
         let size = object.name.endsWith('/') ? '-' : humanize.filesize(object.size)
         let lastModified = object.name.endsWith('/') ? '-' : Moment(object.lastModified).format('lll')
         let loadingClass = loadPath === `${currentPath}${object.name}` ? 'fesl-loading' : ''
+        let actionButtons = ''
+        if (!object.name.endsWith('/')) {
+            actionButtons = <Dropdown id="fia-dropdown">
+                              <Dropdown.Toggle noCaret className="fia-toggle"></Dropdown.Toggle>
+                              <Dropdown.Menu>
+                                  <a href="" className="fiad-action" onClick={(e) => shareObject(e, `${currentPath}${object.name}`)} ><i className="fa fa-copy"></i></a>
+                                  <a href="" className="fiad-action" onClick={(e) => showDeleteConfirmation(e, `${currentPath}${object.name}`)} ><i className="fa fa-trash-empty"></i></a>
+                              </Dropdown.Menu>
+                          </Dropdown>
+        }
         return (
             <div key={i} className={"fesl-row " + loadingClass} data-type={dataType(object.name, object.contentType)}>
 
@@ -36,6 +48,7 @@ let ObjectsList = ({ objects, currentPath, selectPrefix, dataType, removeObject,
                 </div>
                 <div className="fesl-item fi-size">{size}</div>
                 <div className="fesl-item fi-modified">{lastModified}</div>
+                <div className="fesl-item fi-actions">{actionButtons}</div>
             </div>
         )
     })

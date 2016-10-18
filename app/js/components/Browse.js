@@ -38,13 +38,14 @@ import UploadModal from '../components/UploadModal'
 import SettingsModal from '../components/SettingsModal'
 import PolicyInput from '../components/PolicyInput'
 import Policy from '../components/Policy'
-
+import ConfirmModal from './ConfirmModal'
 import logo from '../../img/logo.svg'
-
 import * as actions from '../actions'
 import * as utils from '../utils'
 import * as mime from '../mime'
 import { minioBrowserPrefix } from '../constants'
+import CopyToClipboard from 'react-copy-to-clipboard';
+
 
 export default class Browse extends React.Component {
     componentDidMount() {
@@ -166,7 +167,8 @@ export default class Browse extends React.Component {
         dispatch(actions.showAbout())
     }
 
-    hideAbout() {
+    hideAbout(e) {
+        e.preventDefault()
         const { dispatch } = this.props
         dispatch(actions.hideAbout())
     }
@@ -177,7 +179,8 @@ export default class Browse extends React.Component {
         dispatch(actions.showBucketPolicy())
     }
 
-    hideBucketPolicy() {
+    hideBucketPolicy(e) {
+        e.preventDefault()
         const { dispatch } = this.props
         dispatch(actions.hideBucketPolicy())
     }
@@ -202,22 +205,48 @@ export default class Browse extends React.Component {
       }
     }
 
-    removeObject(e, object) {
-      const { web, dispatch, currentBucket, currentPath } = this.props
+    removeObject() {
+      const { web, dispatch, currentPath, currentBucket, deleteConfirmation } = this.props
       web.RemoveObject({
         bucketName: currentBucket,
-        objectName: currentPath + object.name
+        objectName: deleteConfirmation.object
       })
-      .then(() => dispatch(actions.selectPrefix(currentPath)))
+      .then(() =>{
+        this.hideDeleteConfirmation()
+        dispatch(actions.selectPrefix(currentPath))
+      })
       .catch(e => dispatch(actions.showAlert({
         type: 'danger',
         message: e.message
       })))
     }
 
-    hideAlert() {
-        const { dispatch } = this.props
-        dispatch(actions.hideAlert())
+    hideAlert(e) {
+      e.preventDefault()
+      const { dispatch } = this.props
+      dispatch(actions.hideAlert())
+    }
+
+    showDeleteConfirmation(e, object) {
+      e.preventDefault()
+      const { dispatch } = this.props
+      dispatch(actions.showDeleteConfirmation(object))
+    }
+
+    hideDeleteConfirmation() {
+      const { dispatch } = this.props
+      dispatch(actions.hideDeleteConfirmation())
+    }
+
+    shareObject(e, object) {
+      e.preventDefault()
+      const { dispatch } = this.props
+      dispatch(actions.shareObject(object))
+    }
+
+    hideShareObjectModal() {
+      const { dispatch } = this.props
+      dispatch(actions.hideShareObject())
     }
 
     dataType(name, contentType) {
@@ -289,7 +318,7 @@ export default class Browse extends React.Component {
             target = target.parentNode;
 
         let targetID = target.id;
-        if (!(targetID === 'mh-trigger')) {
+        if (!(targetID === 'feh-trigger')) {
             this.props.dispatch(actions.setSidebarStatus(false))
         }
     }
@@ -301,6 +330,12 @@ export default class Browse extends React.Component {
         dispatch(actions.showSettings())
     }
 
+    showMessage() {
+        const { dispatch } = this.props
+        dispatch(actions.showAlert({type: 'success', message: 'Link copied to clipboard!'}))
+        this.hideShareObjectModal()
+    }
+
     render() {
         const { total, free } = this.props.storageInfo
         const { showMakeBucketModal, alert, sortNameOrder, sortSizeOrder, sortDateOrder, showAbout, showBucketPolicy } = this.props
@@ -308,6 +343,8 @@ export default class Browse extends React.Component {
         const { sidebarStatus } = this.props
         const { showSettings } = this.props
         const { policies, currentBucket, currentPath } = this.props
+        const { deleteConfirmation } = this.props
+        const { shareObject } = this.props
 
         // Don't always show the SettingsModal. This is done here instead of in
         // SettingsModal.js so as to allow for #componentWillMount to handle
@@ -347,9 +384,9 @@ export default class Browse extends React.Component {
                     <Dropzone>
                     {alertBox}
 
-                    <header className="mobile-header hidden-lg hidden-md">
-                        <div id="mh-trigger" className={'mh-trigger '+ (classNames({'mht-toggled': sidebarStatus}))} onClick={this.toggleSidebar.bind(this, !sidebarStatus)}>
-                            <div className="mht-lines">
+                    <header className="fe-header-mobile hidden-lg hidden-md">
+                        <div id="feh-trigger" className={'feh-trigger '+ (classNames({'feht-toggled': sidebarStatus}))} onClick={this.toggleSidebar.bind(this, !sidebarStatus)}>
+                            <div className="feht-lines">
                                 <div className="top"></div>
                                 <div className="center"></div>
                                 <div className="bottom"></div>
@@ -380,7 +417,7 @@ export default class Browse extends React.Component {
                                     <Dropdown.Toggle noCaret>
                                         <i className="fa fa-reorder"></i>
                                     </Dropdown.Toggle>
-                                    <Dropdown.Menu className="dm-right">
+                                    <Dropdown.Menu className="dropdown-menu-right">
                                         <li>
                                             <a href="" onClick={this.fullScreen.bind(this)}>Fullscreen <i className="fa fa-expand"></i></a>
                                         </li>
@@ -424,11 +461,13 @@ export default class Browse extends React.Component {
                                   'fa-sort-numeric-asc': !sortDateOrder
                                 })}/>
                             </div>
+                            <div className="fesl-item fi-actions"></div>
                         </header>
                     </div>
 
                     <div className="feb-container">
-                        <ObjectsList dataType={this.dataType.bind(this)} selectPrefix={this.selectPrefix.bind(this)}/>
+                        <ObjectsList dataType={this.dataType.bind(this)} selectPrefix={this.selectPrefix.bind(this)} showDeleteConfirmation={this.showDeleteConfirmation.bind(this)}
+                          shareObject={this.shareObject.bind(this)} />
                     </div>
 
                     <UploadModal />
@@ -443,7 +482,7 @@ export default class Browse extends React.Component {
                                     <input type="file" onChange={this.uploadFile.bind(this)} style={{display:'none'}}
                                            id="file-input"></input>
                                     <label htmlFor="file-input">
-                                        <i style={{cursor:'pointer'}} className="fa fa-cloud-upload"></i>
+                                        <i className="fa fa-cloud-upload"></i>
                                     </label>
                                 </a>
                             </OverlayTrigger>
@@ -465,29 +504,29 @@ export default class Browse extends React.Component {
                         </Dropdown.Menu>
                     </Dropdown>
 
-                    <Modal className="feb-modal" animation={false} show={showMakeBucketModal} onHide={this.hideMakeBucketModal.bind(this)}>
-
-                        <button className="close" onClick={this.hideMakeBucketModal.bind(this)}><span>&times;</span></button>
-
+                    <Modal className="modal-create-bucket" bsSize="small" animation={false} show={showMakeBucketModal} onHide={this.hideMakeBucketModal.bind(this)}>
+                        <button className="close close-alt" onClick={this.hideMakeBucketModal.bind(this)}><span>&times;</span></button>
                         <ModalBody>
                             <form onSubmit={this.makeBucket.bind(this)}>
-                                <div className="create-bucket">
-                                    <input type="text" ref="makeBucketRef" placeholder="Bucket Name" autoFocus/>
-                                    <i></i>
+                                <div className="input-group">
+                                    <input className="ig-text" type="text" ref="makeBucketRef" placeholder="Bucket Name" autoFocus/>
+                                    <i className="ig-helpers"></i>
                                 </div>
                             </form>
                         </ModalBody>
                     </Modal>
 
-                    <Modal className="about-modal modal-dark" show={showAbout} onHide={this.hideAbout.bind(this)}>
-                        <div className="am-inner">
-                            <div className="ami-item hidden-xs">
+                    <Modal className="modal-about modal-dark" animation={false} show={showAbout} onHide={this.hideAbout.bind(this)}>
+                        <button className="close" onClick={this.hideAbout.bind(this)}><span>&times;</span></button>
+
+                        <div className="ma-inner">
+                            <div className="mai-item hidden-xs">
                                 <a href="https://minio.io" target="_blank">
-                                   <img className="amii-logo" src={logo} alt=""/>
+                                   <img className="maii-logo" src={logo} alt=""/>
                                 </a>
                             </div>
-                            <div className="ami-item">
-                                <ul className="amii-list">
+                            <div className="mai-item">
+                                <ul className="maii-list">
                                     <li>
                                         <div>Version</div>
                                         <small>{version}</small>
@@ -505,33 +544,52 @@ export default class Browse extends React.Component {
                                         <small>{runtime}</small>
                                     </li>
                                 </ul>
-
-                                <div className="modal-footer p-0 p-t-10 text-left">
-                                    <a href="" className="mf-btn" onClick={this.hideAbout.bind(this)}>
-                                        <i className="fa fa-check"></i>
-                                    </a>
-                                </div>
                             </div>
                         </div>
                     </Modal>
 
-                    <Modal className="policy-modal" show={showBucketPolicy} onHide={this.hideBucketPolicy.bind(this)}>
+                    <Modal className="modal-policy" animation={false} show={showBucketPolicy} onHide={this.hideBucketPolicy.bind(this)}>
                         <ModalHeader>
                             Bucket Policy
-                            <small>Cras justo odio, dapibus ac facilisis in, egestas eget quam.</small>
 
-                            <a href="" className="mh-close" onClick={this.hideBucketPolicy.bind(this)}>
-                                <i className="fa fa-times"></i>
-                            </a>
+                            <button className="close close-alt" onClick={this.hideBucketPolicy.bind(this)}><span>&times;</span></button>
                         </ModalHeader>
 
                         <div className="pm-body">
-                            <PolicyInput bucket={currentBucket} prefix={currentPath} />
-                            <ul className="pmb-list">
-                              {policies.map(policy =>
-                                <Policy policy={policy} {...actions} />
-                              )}
-                            </ul>
+                            <PolicyInput bucket={currentBucket} />
+                            {policies.map(policy =>
+                                <Policy prefix={policy.prefix} policy={policy.policy} />
+                            )}
+                        </div>
+                    </Modal>
+
+                    <ConfirmModal
+                        show={deleteConfirmation.show}
+                        icon='fa fa-attention mci-red'
+                        text='Are you sure you want to delete?'
+                        sub='This cannot be undone!'
+                        okText='Delete'
+                        cancelText='Cancel'
+                        okHandler={this.removeObject.bind(this)}
+                        cancelHandler={this.hideDeleteConfirmation.bind(this)}>
+                    </ConfirmModal>
+
+                    <Modal show={shareObject.show} animation={false} onHide={this.hideShareObjectModal.bind(this)} bsSize="small">
+                        <ModalBody>
+                            <div className="copy-text">
+                                <label>Shareable Link</label>
+                                <input type="text" readOnly="readOnly" value={shareObject.url} />
+                            </div>
+
+                            <div className={'ct-message '+ (classNames({'toggled': shareObject.clipboardStatus}))}>Link copied to clipboard</div>
+                        </ModalBody>
+
+                        <div className="modal-footer">
+                            <CopyToClipboard text={shareObject.url} onCopy={this.showMessage.bind(this)}>
+                                <button className="btn btn-success">Copy Link</button>
+                            </CopyToClipboard>
+
+                            <button className="btn btn-link" onClick={this.hideShareObjectModal.bind(this)}>Cancel</button>
                         </div>
                     </Modal>
 

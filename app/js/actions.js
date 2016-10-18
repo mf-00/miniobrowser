@@ -48,12 +48,71 @@ export const SET_LOAD_PATH = 'SET_LOAD_PATH'
 export const SHOW_SETTINGS = 'SHOW_SETTINGS'
 export const SET_SETTINGS = 'SET_SETTINGS'
 export const SHOW_BUCKET_POLICY = 'SHOW_BUCKET_POLICY'
+export const SET_POLICIES = 'SET_POLICIES'
 export const ADD_POLICY = 'ADD_POLICY'
 export const REMOVE_POLICY = 'REMOVE_POLICY'
-export const UPDATE_POLICY = 'UPDATE_POLICY'
 export const READ_ONLY = 'readonly'
 export const WRITE_ONLY = 'writeonly'
 export const READ_WRITE = 'readwrite'
+export const SET_SHARE_OBJECT = 'SET_SHARE_OBJECT'
+export const DELETE_CONFIRMATION = 'DELETE_CONFIRMATION'
+
+export const showDeleteConfirmation = (object) => {
+  return {
+    type: DELETE_CONFIRMATION,
+    payload: {
+      object,
+      show: true
+    }
+  }
+}
+
+export const hideDeleteConfirmation = () => {
+  return {
+    type: DELETE_CONFIRMATION,
+    payload: {
+      object: '',
+      show: false
+    }
+  }
+}
+
+export const showShareObject = url => {
+  return {
+    type: SET_SHARE_OBJECT,
+    shareObject: {
+      url: url,
+      show: true
+    }
+  }
+}
+
+export const hideShareObject = () => {
+  return {
+    type: SET_SHARE_OBJECT,
+    shareObject: {
+      url: '',
+      show: false
+    }
+  }
+}
+
+export const shareObject = (object) => (dispatch, getState) => {
+  const { currentBucket, web } = getState()
+  let host = location.host
+  let bucket = currentBucket
+
+  web.PresignedGet({host, bucket, object})
+     .then(obj => {
+       dispatch(showShareObject(obj.url))
+     })
+     .catch(err => {
+       dispatch(showAlert({
+         type: 'danger',
+         message: err.message
+       }))
+     })
+}
 
 export const setLoginRedirectPath = (path) => {
   return {
@@ -94,13 +153,6 @@ export const addBucket = bucket => {
   return {
     type: ADD_BUCKET,
     bucket
-  }
-}
-
-export const addObject = object => {
-  return {
-    type: ADD_OBJECT,
-    object
   }
 }
 
@@ -297,13 +349,13 @@ export const uploadFile = (file, xhr) => {
 
     xhr.onload = function(event) {
       if(xhr.status == 200) {
-	setShowAbortModal(false)
-	dispatch(stopUpload({slug}))
-	dispatch(showAlert({
-          type: 'success',
-          message: 'File \'' + file.name + '\' uploaded successfully.'
-	}))
-	dispatch(selectPrefix(currentPath))
+          setShowAbortModal(false)
+          dispatch(stopUpload({slug}))
+          dispatch(showAlert({
+              type: 'success',
+              message: 'File \'' + file.name + '\' uploaded successfully.'
+          }))
+          dispatch(selectPrefix(currentPath))
       }
     }
 
@@ -405,6 +457,13 @@ export const hideBucketPolicy = () => {
     }
 }
 
+export const setPolicies = (policies) => {
+    return {
+        type: SET_POLICIES,
+        policies
+    }
+}
+
 export const addPolicy = (bucket, prefix, policy) => {
     return {
         type: ADD_POLICY,
@@ -414,14 +473,7 @@ export const addPolicy = (bucket, prefix, policy) => {
 
 export const removePolicy = (bucket, prefix) => {
     return {
-        type: types.REMOVE_POLICY,
+        type: REMOVE_POLICY,
         bucket, prefix
-    }
-}
-
-export const updatePolicy = (bucket, prefix, policy) => {
-    return {
-        type: types.UPDATE_POLICY,
-        bucket, prefix, policy
     }
 }
